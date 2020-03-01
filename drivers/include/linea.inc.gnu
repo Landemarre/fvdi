@@ -1,0 +1,20 @@
+
+
+
+
+
+
+
+	.equiv	colbit0,0x18
+	.equiv	colbit1,0x1a
+	.equiv	colbit2,0x1c
+	.equiv	colbit3,0x1e
+
+	.equiv	x1,0x26
+	.equiv	y1,0x28
+	.equiv	x2,0x2a
+	.equiv	y2,0x2c 
+
+	.equiv	lstlin,0x20
+	.equiv	lnmask,0x22
+	.equiv	wmode,0x24
