@@ -1,0 +1,468 @@
+/*
+ * A 32 bit graphics fill routine, by Olivier Landemarre.
+ * adaptation from 16 bit routine Johan Klockars 
+ *
+ * $Id: 16b_fill.c,v 1.2 2002-07-10 22:13:39 johan Exp $
+ *
+ * This file is an example of how to write an
+ * fVDI device driver routine in C.
+ *
+ * You are encouraged to use this file as a starting point
+ * for other accelerated features, or even for supporting
+ * other graphics modes. This file is therefore put in the
+ * public domain. It's not copyrighted or under any sort
+ * of license.
+ */
+
+#if 1
+#define FAST		/* Write in FastRAM buffer */
+#define BOTH		/* Write in both FastRAM and on screen */
+#else
+#undef FAST
+#undef BOTH
+#endif
+
+#ifdef WITHOUT_BOTH
+#undef BOTH
+#undef FAST
+#endif
+
+#include "fvdi.h"
+
+#include <os.h>
+#define PIXEL		unsigned long
+#define PIXEL_SIZE	sizeof(PIXEL)
+
+extern void CDECL c_get_colour(Virtual *vwk, long colour, PIXEL *foreground, PIXEL *background);
+
+/*
+ * Make it as easy as possible for the C compiler.
+ * The current code is written to produce reasonable results with Lattice C.
+ * (long integers, optimize: [x xx] time)
+ * - One function for each operation -> more free registers
+ * - 'int' is the default type
+ * - some compilers aren't very smart when it comes to *, / and %
+ * - some compilers can't deal well with *var++ constructs
+ */
+
+#ifdef BOTH
+static void s_replace(PIXEL *addr, PIXEL *addr_fast, int line_add, short *pattern, int x, int y, int w, int h, PIXEL foreground, PIXEL background)
+{
+	int i, j;
+	unsigned int pattern_word, mask;
+	
+	i = y;
+	h = y + h;
+	x = 1 << (15 - (x & 0x000f));
+
+	for(; i < h; i++) {
+		pattern_word = pattern[i & 0x000f];
+		switch (pattern_word) {
+		case 0xffff:
+			for(j = w - 1; j >= 0; j--) {
+				*addr_fast = foreground;
+				addr_fast++;
+				*addr = foreground;
+				addr++;
+			}
+			break;
+		default:
+			mask = x;
+			for(j = w - 1; j >= 0; j--) {
+				if (pattern_word & mask) {
+					*addr_fast = foreground;
+					addr_fast++;
+					*addr = foreground;
+					addr++;
+				} else {
+					*addr_fast = background;
+					addr_fast++;
+					*addr = background;
+					addr++;
+				}
+				if (!(mask >>= 1))
+					mask = 0x8000;
+			}
+			break;
+		}
+		addr_fast += line_add;
+		addr += line_add;
+	}
+}
+
+static void s_transparent(PIXEL *addr, PIXEL *addr_fast, int line_add, short *pattern, int x, int y, int w, int h, PIXEL foreground, PIXEL background)
+{
+	int i, j;
+	unsigned int pattern_word, mask;
+
+	i = y;
+	h = y + h;
+	x = 1 << (15 - (x & 0x000f));
+
+	for(; i < h; i++) {
+		pattern_word = pattern[i & 0x000f];
+		switch (pattern_word) {
+		case 0xffff:
+			for(j = w - 1; j >= 0; j--) {
+				*addr_fast = foreground;
+				addr_fast++;
+				*addr = foreground;
+				addr++;
+			}
+			break;
+		default:
+			mask = x;
+			for(j = w - 1; j >= 0; j--) {
+				if (pattern_word & mask) {
+					*addr_fast = foreground;
+					addr_fast++;
+					*addr = foreground;
+					addr++;
+				} else {
+					addr_fast++;
+					addr++;
+				}
+				if (!(mask >>= 1))
+					mask = 0x8000;
+			}
+			break;
+		}
+		addr_fast += line_add;
+		addr += line_add;
+	}
+}
+
+static void s_xor(PIXEL *addr, PIXEL *addr_fast, int line_add, short *pattern, int x, int y, int w, int h, PIXEL foreground, PIXEL background)
+{
+	int i, j;
+	unsigned int pattern_word, mask;
+	PIXEL v;
+
+	i = y;
+	h = y + h;
+	x = 1 << (15 - (x & 0x000f));
+
+	for(; i < h; i++) {
+		pattern_word = pattern[i & 0x000f];
+		switch (pattern_word) {
+		case 0xffff:
+			for(j = w - 1; j >= 0; j--) {
+
+				v = ~*addr_fast;
+
+
+				*addr_fast = v;
+				addr_fast++;
+				*addr = v;
+				addr++;
+			}
+			break;
+		default:
+			mask = x;
+			for(j = w - 1; j >= 0; j--) {
+				if (pattern_word & mask) {
+					v = ~*addr_fast;
+
+
+					*addr_fast = v;
+					addr_fast++;
+					*addr = v;
+					addr++;
+				} else {
+					addr_fast++;
+					addr++;
+				}
+				if (!(mask >>= 1))
+					mask = 0x8000;
+			}
+			break;
+		}
+		addr_fast += line_add;
+		addr += line_add;
+	}
+}
+
+static void s_revtransp(PIXEL *addr, PIXEL *addr_fast, int line_add, short *pattern, int x, int y, int w, int h, PIXEL foreground, PIXEL background)
+{
+	int i, j;
+	unsigned int pattern_word, mask;
+
+	i = y;
+	h = y + h;
+	x = 1 << (15 - (x & 0x000f));
+
+	for(; i < h; i++) {
+		pattern_word = pattern[i & 0x000f];
+		switch (pattern_word) {
+		case 0x0000:
+			for(j = w - 1; j >= 0; j--) {
+				*addr_fast = foreground;
+				addr_fast++;
+				*addr = foreground;
+				addr++;
+			}
+			break;
+		default:
+			mask = x;
+			for(j = w - 1; j >= 0; j--) {
+				if (!(pattern_word & mask)) {
+					*addr_fast = foreground;
+					addr_fast++;
+					*addr = foreground;
+					addr++;
+				} else {
+					addr_fast++;
+					addr++;
+				}
+				if (!(mask >>= 1))
+					mask = 0x8000;
+			}
+			break;
+		}
+		addr_fast += line_add;
+		addr += line_add;
+	}
+}
+
+
+#define BOTH_WAS_ON
+#endif
+#undef BOTH
+
+/*
+ * The functions below are exact copies of those above.
+ * The '#undef BOTH' makes sure that this works as it should
+ * when no shadow buffer is available
+ */
+
+static void replace(PIXEL *addr, PIXEL *addr_fast, int line_add, short *pattern, int x, int y, int w, int h, PIXEL foreground, PIXEL background)
+{
+	int i, j;
+	unsigned int pattern_word, mask;
+
+	i = y;
+	h = y + h;
+	x = 1 << (15 - (x & 0x000f));
+
+	for(; i < h; i++) {
+		pattern_word = pattern[i & 0x000f];
+		switch (pattern_word) {
+		case 0xffff:
+			for(j = w - 1; j >= 1; j-=2) {
+				*addr++ = foreground;
+				*addr++ = foreground;
+			}
+			if(j==0) *addr++ = foreground;
+			break;
+		default:
+			mask = x;
+			for(j = w - 1; j >= 0; j--) {
+				if (pattern_word & mask) {
+					*addr++ = foreground;
+				} else {
+
+					*addr++ = background;
+				}
+				if (!(mask >>= 1))
+					mask = 0x8000;
+			}
+			break;
+		}
+
+		addr += line_add;
+	}
+}
+
+static void transparent(PIXEL *addr, PIXEL *addr_fast, int line_add, short *pattern, int x, int y, int w, int h, PIXEL foreground, PIXEL background)
+{
+	int i, j;
+	unsigned int pattern_word, mask;
+
+	i = y;
+	h = y + h;
+	x = 1 << (15 - (x & 0x000f));
+
+	for(; i < h; i++) {
+		pattern_word = pattern[i & 0x000f];
+		switch (pattern_word) {
+		case 0xffff:
+			for(j = w - 1; j >= 0; j--) {
+				*addr = foreground;
+				addr++;
+			}
+			break;
+		default:
+			mask = x;
+			for(j = w - 1; j >= 0; j--) {
+				if (pattern_word & mask) {
+
+					*addr = foreground;
+					addr++;
+				} else {
+
+					addr++;
+				}
+				if (!(mask >>= 1))
+					mask = 0x8000;
+			}
+			break;
+		}
+
+		addr += line_add;
+	}
+}
+
+static void xor(PIXEL *addr, PIXEL *addr_fast, int line_add, short *pattern, int x, int y, int w, int h, PIXEL foreground, PIXEL background)
+{
+	int i, j;
+	unsigned int pattern_word, mask;
+	PIXEL v;
+
+	i = y;
+	h = y + h;
+	x = 1 << (15 - (x & 0x000f));
+
+	for(; i < h; i++) {
+		pattern_word = pattern[i & 0x000f];
+		switch (pattern_word) {
+		case 0xffff:
+			for(j = w - 1; j >= 0; j--) {
+				v = ~*addr;
+				*addr++ = v;
+			}
+			break;
+		default:
+			mask = x;
+			for(j = w - 1; j >= 0; j--) {
+				if (pattern_word & mask) {
+					v = ~*addr;
+					*addr++ = v;
+				} else {
+
+					addr++;
+				}
+				if (!(mask >>= 1))
+					mask = 0x8000;
+			}
+			break;
+		}
+
+		addr += line_add;
+	}
+}
+
+static void revtransp(PIXEL *addr, PIXEL *addr_fast, int line_add, short *pattern, int x, int y, int w, int h, PIXEL foreground, PIXEL background)
+{
+	int i, j;
+	unsigned int pattern_word, mask;
+
+	i = y;
+	h = y + h;
+	x = 1 << (15 - (x & 0x000f));
+
+	for(; i < h; i++) {
+		pattern_word = pattern[i & 0x000f];
+		switch (pattern_word) {
+		case 0x0000:
+			for(j = w - 1; j >= 0; j--) {
+
+				*addr = foreground;
+				addr++;
+			}
+			break;
+		default:
+			mask = x;
+			for(j = w - 1; j >= 0; j--) {
+				if (!(pattern_word & mask)) {
+
+					*addr = foreground;
+					addr++;
+				} else {
+
+					addr++;
+				}
+				if (!(mask >>= 1))
+					mask = 0x8000;
+			}
+			break;
+		}
+
+		addr += line_add;
+	}
+}
+
+
+#ifdef BOTH_WAS_ON
+#define BOTH
+#endif
+
+long CDECL c_fill_area(Virtual *vwk, long x, long y, long w, long h,
+                       short *pattern, long colour, long mode, long interior_style)
+{
+	Workstation *wk;
+	PIXEL *addr, *addr_fast;
+	PIXEL foreground, background;
+  	int line_add;
+	long pos;
+	short *table;
+
+	table = 0;
+	if ((long)vwk & 1) {
+		if ((y & 0xffff) != 0)
+			return -1;		/* Don't know about this kind of table operation */
+		table = (short *)x;
+		h = (y >> 16) & 0xffff;
+		vwk = (Virtual *)((long)vwk - 1);
+		return -1;			/* Don't know about anything yet */
+	}
+	c_get_colour(vwk, colour, &foreground, &background);
+
+	wk = vwk->real_address;
+
+	pos = (short)y * (long)wk->screen.wrap + x * PIXEL_SIZE/*2*/;
+	addr = wk->screen.mfdb.address;
+	line_add = (wk->screen.wrap - w * PIXEL_SIZE)>> 2;/*  /PIXEL_SIZE plus universel*/
+
+#ifdef BOTH
+	if (addr_fast = wk->screen.shadow.address) {
+
+		addr += pos >> 2;  /* /PIXEL_SIZE plus universel*/
+#ifdef BOTH
+		addr_fast += pos >> 2;    /* /PIXEL_SIZE plus universel*/
+#endif
+		switch (mode) {
+		case 1:				/* Replace */
+			s_replace(addr, addr_fast, line_add, pattern, x, y, w, h, foreground, background);
+			break;
+		case 2:				/* Transparent */
+			s_transparent(addr, addr_fast, line_add, pattern, x, y, w, h, foreground, background);
+			break;
+		case 3:				/* XOR */
+			s_xor(addr, addr_fast, line_add, pattern, x, y, w, h, foreground, background);
+			break;
+		case 4:				/* Reverse transparent */
+			s_revtransp(addr, addr_fast, line_add, pattern, x, y, w, h, foreground, background);
+			break;
+		}
+	} else {
+#endif
+		addr += pos >> 2;    /* /PIXEL_SIZE plus universel*/
+		switch (mode) {
+		case 1:				/* Replace */
+			replace(addr, addr_fast, line_add, pattern, x, y, w, h, foreground, background);
+			break;
+		case 2:				/* Transparent */
+			transparent(addr, addr_fast, line_add, pattern, x, y, w, h, foreground, background);
+			break;
+		case 3:				/* XOR */
+			xor(addr, addr_fast, line_add, pattern, x, y, w, h, foreground, background);
+			break;
+		case 4:				/* Reverse transparent */
+			revtransp(addr, addr_fast, line_add, pattern, x, y, w, h, foreground, background);
+			break;
+		}
+#ifdef BOTH
+	}
+#endif
+	return 1;		/* Return as completed */
+}
