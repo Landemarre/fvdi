@@ -1,0 +1,55 @@
+# DO NOT DELETE
+
+startup.o: ../include/os.h ../include/fvdi.h ../include/utility.h
+startup.o: ../include/globals.h ../include/relocate.h ../include/function.h
+startup.o: ../include/calamus.h
+utility.o: ../include/os.h ../include/fvdi.h ../include/relocate.h
+utility.o: ../include/utility.h ../include/globals.h
+bezier.o: ../include/fvdi.h ../include/utility.h ../include/function.h
+conic.o: ../include/fvdi.h ../include/utility.h ../include/function.h
+conic.o: ../include/globals.h ../include/relocate.h
+escape.o: ../include/fvdi.h ../include/function.h
+fonts.o: ../include/os.h ../include/fvdi.h ../include/relocate.h
+fonts.o: ../include/utility.h
+line.o: ../include/fvdi.h ../include/function.h ../include/utility.h
+loader.o: ../include/os.h ../include/fvdi.h ../include/relocate.h
+loader.o: ../include/utility.h ../include/function.h ../include/globals.h
+polygon.o: ../include/fvdi.h ../include/function.h
+setup.o: ../include/os.h ../include/fvdi.h ../include/relocate.h
+setup.o: ../include/utility.h ../include/function.h ../include/globals.h
+workstn.o: ../include/fvdi.h ../include/utility.h ../include/function.h
+workstn.o: ../include/globals.h ../include/relocate.h
+colour.o: ../include/fvdi.h ../include/utility.h
+textlib.o: ../include/fvdi.h ../include/function.h ../include/globals.h
+textlib.o: ../include/relocate.h
+calamus.o: ../include/fvdi.h ../include/utility.h ../include/function.h
+calamus.o: ../include/globals.h ../include/relocate.h ../include/calamus.h
+default.o: ../include/fvdi.h ../include/function.h
+
+
+
+../modules/ft2/ft2.o:  ../include/fvdi.h
+../modules/ft2/ft2.o: ../include/globals.h ../include/relocate.h
+../modules/ft2/ft2.o: ../include/utility.h ../include/function.h
+../modules/ft2/ft2.o: ../modules/ft2/list.h
+../modules/ft2/ft2_ftsystem.o: ../modules/include/stdio.h
+../modules/ft2/ft2_ftsystem.o: ../modules/include/libkern.h
+
+
+
+
+
+
+
+
+
+
+
+../modules/ft2/ft2_ftsystem.o: ../modules/include/stdlib.h
+
+
+
+
+../modules/ft2/ft2_ftsystem.o: ../include/globals.h ../include/relocate.h
+../modules/ft2/ft2_ftsystem.o: ../include/fvdi.h ../include/utility.h
+../modules/ft2/ft2_ftsystem.o: ../include/function.h

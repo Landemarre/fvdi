@@ -1,0 +1,37 @@
+FVDI_PC.PRG
+.C	[-H -X -Y -P -I=..\include]
+.S	[-D=lattice=0 -D=gas=0 -S -Y -I=..\include -I=..\drivers\include -I=..\drivers\1_plane]
+=
+FVDI.S		(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+UNIMPL.S	(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+SIMPLE.S	(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+COLOURS.S	(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+MOUSE.S		(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+LINE_SQ.S	(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+MARK_SQ.S	(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+FILL_SQ.S	(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+TEXT_SQ.S	(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+DRAW.S		(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+TEXT.S		(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+TEXTRNDR.S	(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+EXPAND.S	(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+BLIT.S		(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+VDI_MISC.S	(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+SUPPORT.S	(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas) [-S -Y -3]
+SYS_CALL.S
+startup.c	(..\include\fvdi.h, ..\include\relocate.h)
+loader.c	(..\include\fvdi.h, ..\include\relocate.h)
+fonts.c		(..\include\fvdi.h, ..\include\relocate.h)
+setup.c		(..\include\fvdi.h, ..\include\relocate.h)
+workstn.c	(..\include\fvdi.h, ..\include\relocate.h)
+utility.c	(..\include\fvdi.h, ..\include\relocate.h)
+polygon.c	(..\include\fvdi.h, ..\include\relocate.h)
+conic.c		(..\include\fvdi.h, ..\include\relocate.h)
+math.c		(..\include\fvdi.h, ..\include\relocate.h)
+line.c		(..\include\fvdi.h, ..\include\relocate.h)
+bezier.c	(..\include\fvdi.h, ..\include\relocate.h)
+patterns.c	(..\include\fvdi.h, ..\include\relocate.h)
+escape.c	(..\include\fvdi.h, ..\include\relocate.h)
+TRAPTABL.S	(..\include\vdi.inc, ..\include\types.inc, ..\include\macros.tas)
+PUREC.S
+PCSTDLIB.LIB       ; standard library
