@@ -50,10 +50,7 @@ struct Node
     char *ln_Name;
 };
 
-/*
- * Inspired from:
- * https://github.com/ezrec/saga-drivers/blob/master/saga.card/include/picasso96/card.h
- */
+
 struct ModeInfo
 {
     struct Node Node;
@@ -74,6 +71,7 @@ struct ModeInfo
     UBYTE       Numerator;
     UBYTE       Denomerator;
     ULONG       PixelClock;
+    UWORD	setscreenmode;
 };
 
 #define GMB_DOUBLECLOCK         0       /* Clock is doubled after selection */
@@ -92,11 +90,24 @@ struct ModeInfo
 #define GMF_COMPATVIDEO         (1UL << GMB_COMPATVIDEO)
 #define GMF_DOUBLEVERTICAL      (1UL << GMB_DOUBLEVERTICAL)
 
+extern short hwmouse;
+
 /*
  * Inspired from:
  * https://github.com/ezrec/saga-drivers/blob/master/saga.card/saga_intern.h
  */
 
+#ifdef __PUREC__
+static VOID Write32(IPTR addr, ULONG value)
+{
+    *(volatile ULONG *)addr = value;
+}
+
+static VOID Write16(IPTR addr, UWORD value)
+{
+    *(volatile UWORD *)addr = value;
+}
+#else
 static inline VOID Write32(IPTR addr, ULONG value)
 {
     *(volatile ULONG *)addr = value;
@@ -106,6 +117,9 @@ static inline VOID Write16(IPTR addr, UWORD value)
 {
     *(volatile UWORD *)addr = value;
 }
+#endif
+
+
 
 /* Test if width or height requires doublescan
  */
@@ -123,9 +137,12 @@ extern struct ModeInfo modeline_vesa_entry[];
 extern const int modeline_vesa_entries;
 
 /* from saga.c */
-void saga_fix_mode(struct ModeInfo *mi);
-void saga_set_clock(const struct ModeInfo *mi);
-void saga_set_modeline(const struct ModeInfo *mi, UBYTE Format);
-void saga_set_panning(UBYTE *mem);
+void saga_set_modeline(struct ModeInfo *mi, UBYTE Format);
+void saga_set_panning(struct ModeInfo *mi, UBYTE *mem);
+void saga_set_mouse_position(short x, short y);
+
+#ifdef FVDI_H
+void saga_set_mouse_sprite(Workstation *wk, Mouse *mouse);
+#endif
 
 #endif /* SAGA_H */

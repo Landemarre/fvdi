@@ -24,6 +24,7 @@
 #include "relocate.h"
 #include "saga.h"
 #include "video.h"
+#include "board.h"
 #include <os.h>
 
 #include "driver.h"
@@ -87,6 +88,10 @@ void *mouse_draw_r  = &c_mouse_draw;
 void *set_colours_r = &c_set_colours;
 void *get_colours_r = 0;
 void *get_colour_r  = &c_get_colour;
+
+
+short hwmouse = -1;
+
 
 static void saga_puts(const char* message)
 {
@@ -229,26 +234,56 @@ long check_token(char *token, const char **ptr)
 static struct ModeInfo *mi;
 static UBYTE *screen_address;
 
-/* Fix all ModeInfo with PLL data */
-static void fix_all_mode_info(void)
-{
-	int i;
-
-	for (i = 0; i < modeline_vesa_entries; i++) {
-		struct ModeInfo *mi = &modeline_vesa_entry[i];
-		saga_fix_mode(mi);
-	}
-}
-
 /* Find ModeInfo according to requested video mode */
 static struct ModeInfo *find_mode_info(void)
-{
-	int i;
-
-	for (i = 0; i < modeline_vesa_entries; i++) {
-		struct ModeInfo *p = &modeline_vesa_entry[i];
-		if (p->Width == resolution.width && p->Height == resolution.height)
-			return p;
+{	static struct ModeInfo mymod;
+	mymod.Width = resolution.width;
+	mymod.Height = resolution.height;
+	switch (resolution.width)
+	{
+		case 1280:
+			if(resolution.height == 720) 
+			{	mymod.setscreenmode = 0x8|0x10|0x40; /* VIDEL_OVERSCAN */
+				return &mymod;
+			}
+		break;
+		case 960:
+			if(resolution.height == 540)
+			{	mymod.setscreenmode = 0x8|0x10; /* VIDEL_VGA VIDEL_80COL */
+				return &mymod;
+			}
+		break;
+		case 640:
+			if(resolution.height == 480) 
+			{
+				mymod.setscreenmode = 0x8|0x100; /* VIDEL_80COL VIDEL_VERTICAL */
+				return &mymod;
+			}
+			if(resolution.height == 400) 
+			{
+				mymod.setscreenmode = 0x8|0x80; /* VIDEL_80COL VIDEL_COMPAT */
+				return &mymod;
+			}
+		break;
+		case 320:
+			if(resolution.height == 240) return &mymod;
+			{
+				mymod.setscreenmode = 0; /* */
+				return &mymod;
+			}
+			if(resolution.height == 200) 
+			{
+				mymod.setscreenmode = 0x80; /* VIDEL_COMPAT */
+				return &mymod;
+			}
+		break;
+		case 304:
+			if(resolution.height == 224) 
+			{	mymod.setscreenmode = 0x200; /* VIDEL_NEOGEO */
+				return &mymod;
+			}
+		default:
+		break;
 	}
 
 	panic("Requested video mode mode not available.");
@@ -260,10 +295,10 @@ UBYTE *saga_alloc_vram(UWORD width, UWORD height)
 {
 	ULONG buffer;
 	ULONG vram_size = (ULONG)width * height * sizeof(short);
-	const int alignment = 32; /* Size of SAGA burst reads */
+	const int alignment = 64; /* Size of SAGA burst reads */
 
 	/* SAGA screen buffers reside in Alt-RAM */
-	buffer = (ULONG)Mxalloc(vram_size + alignment - 1, 1);
+	buffer = (ULONG)access->funcs.malloc(vram_size + alignment - 1, 1);/*Mxalloc(vram_size + alignment - 1, 1);*/
 	if (!buffer)
 		panic("Mxalloc() failed to allocate screen buffer.");
 
@@ -291,7 +326,6 @@ long CDECL initialize(Virtual *vwk)
 	access->funcs.puts("\r\n");
 
 	/* Initialize the RTG card with the requested video mode */
-	fix_all_mode_info();
 	mi = find_mode_info();
 	screen_address = saga_alloc_vram(resolution.width, resolution.height);
 
@@ -335,6 +369,32 @@ long CDECL initialize(Virtual *vwk)
 	pixel.width = wk->screen.pixel.width;
 	pixel.height = wk->screen.pixel.height;
 
+	/*
+	 * wk->mouse.type is set by fVDI kernel,
+	 * if oldmouse was not specified in config line for driver,
+	 * and accelerated mouse routines are in use
+	 */
+	if (1/*wk->mouse.type*/)
+	{
+		/* check whether hardware sprites are supported */
+		UBYTE boardid = ( *(volatile UWORD*)VREG_BOARD ) >> 8;
+		int has_hwsprite;
+		
+wk->mouse.type=TRUE;
+
+		has_hwsprite = boardid == VREG_BOARD_V4 || boardid == VREG_BOARD_V4SA;
+		/* above does not seem to apply */
+		has_hwsprite = TRUE;
+		if (hwmouse < 0)
+		{
+			hwmouse = has_hwsprite;
+		} else if (hwmouse && !has_hwsprite)
+		{
+			access->funcs.puts("saga: hwmouse not supported, disabled\r\n");
+			hwmouse = FALSE;
+		}
+	}
+
 	return 1;
 }
 
@@ -370,9 +430,8 @@ Virtual* CDECL opnwk(Virtual *vwk)
 	wk = vwk->real_address;
 
 	/* Switch to SAGA screen */
-	saga_set_clock(mi);
-	saga_set_modeline(mi, SAGA_VIDEO_FORMAT_RGB16);
-	saga_set_panning(screen_address);
+	saga_set_modeline(mi, 4/*VIDEL_TRUECOLOR*/); /* 16 bit format */
+	saga_set_panning(mi, screen_address);
 
 	/* update the settings */
 	wk->screen.mfdb.width = mi->Width;
@@ -403,6 +462,12 @@ Virtual* CDECL opnwk(Virtual *vwk)
 	else									/*	 or fixed DPI (negative) */
 		wk->screen.pixel.height = 25400 / -pixel.height;
 
+	if (1/*wk->mouse.type*/)
+	{
+		wk->mouse.position.x = ((wk->screen.coordinates.max_x - wk->screen.coordinates.min_x + 1) >> 1) + wk->screen.coordinates.min_x;
+		wk->mouse.position.y = ((wk->screen.coordinates.max_y - wk->screen.coordinates.min_y + 1) >> 1) + wk->screen.coordinates.min_y;
+	}
+
 	return 0;
 }
 
@@ -411,4 +476,5 @@ Virtual* CDECL opnwk(Virtual *vwk)
  */
 void CDECL clswk(Virtual *vwk)
 {
+		(void) vwk;
 }

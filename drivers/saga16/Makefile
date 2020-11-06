@@ -21,7 +21,7 @@ CPU     = 040
 CFLAGS  = -m68$(CPU) -mshort -O2 -fomit-frame-pointer -DWITHOUT_BOTH -I$(top_srcdir)/include -I$(top_srcdir)/drivers/include $(M68K_ATARI_MINT_CFLAGS) -Wall
 ASFLAGS = -m68$(CPU) -DWITHOUT_BOTH -I$(top_srcdir)/include -I$(top_srcdir)/drivers/include
 
-#LDFLAGS = $(M68K_ATARI_MINT_LDFLAGS)
+LDFLAGS = $(M68K_ATARI_MINT_LDFLAGS) --mprg-flags=7
 #-L/usr/local/m68k-atari-mint/usr/lib
 #CFLAGS += -I/usr/local/m68k-atari-mint/usr/include
 #LIBS    = -L/lib/gcc-lib/m68k-atari-mint/2.95.3/ -lgcc
@@ -39,14 +39,14 @@ SSRC = \
 	../common/c_common.s \
 	../common/common.s \
 	../common/clip.s \
-	../common/lineachk.s
+	../common/lineachk.s \
+	../16_bitv4/fast.s
 
 CSRC = \
 	../common/init.c \
 	../common/colours.c \
 	sag_spec.c \
 	saga.c \
-	modeline_vesa.c \
 	saga_pll.c \
 	../16_bitv4/16b_exp.c \
 	../16_bitv4/16b_blit.c \
@@ -54,7 +54,8 @@ CSRC = \
 	../16_bitv4/16b_fill.c \
 	../16_bitv4/16b_scr.c \
 	../16_bitv4/16b_pal.c \
-	../uaegfx/uae_mous.c
+    ../saga/sag_mous.c
+#	../uaegfx/uae_mous.c
 
 # handle DevPac -> gas conversions
 # defines SSRC_GNU and SINCSRC_GNU variables
