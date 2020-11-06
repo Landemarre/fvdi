@@ -50,7 +50,7 @@ struct {
 	short height;
 	short bpp;
 	short freq;
-} resolution = {0, 640, 480, 32/*16*/, 60};
+} resolution = {0, 960/*640*/, 540/*480*/, 32/*16*/, 60};
 
 struct {
 	short width;
@@ -91,6 +91,8 @@ void *mouse_draw_r  = &c_mouse_draw;
 void *set_colours_r = &c_set_colours;
 void *get_colours_r = 0;
 void *get_colour_r  = &c_get_colour;
+
+/* short hwmouse = -1;*/
 
 static void saga_puts(const char* message)
 {
@@ -233,26 +235,57 @@ long check_token(char *token, const char **ptr)
 static struct ModeInfo *mi;
 static UBYTE *screen_address;
 
-/* Fix all ModeInfo with PLL data */
-static void fix_all_mode_info(void)
-{
-	int i;
-
-	for (i = 0; i < modeline_vesa_entries; i++) {
-		struct ModeInfo *mi = &modeline_vesa_entry[i];
-		saga_fix_mode(mi);
-	}
-}
 
 /* Find ModeInfo according to requested video mode */
 static struct ModeInfo *find_mode_info(void)
-{
-	int i;
-
-	for (i = 0; i < modeline_vesa_entries; i++) {
-		struct ModeInfo *p = &modeline_vesa_entry[i];
-		if (p->Width == resolution.width && p->Height == resolution.height)
-			return p;
+{	static struct ModeInfo mymod;
+	mymod.Width = resolution.width;
+	mymod.Height = resolution.height;
+	switch (resolution.width)
+	{
+		case 1280:
+			if(resolution.height == 720) 
+			{	mymod.setscreenmode = 0x8|0x10|0x40; /* VIDEL_OVERSCAN */
+				return &mymod;
+			}
+		break;
+		case 960:
+			if(resolution.height == 540)
+			{	mymod.setscreenmode = 0x8|0x10; /* VIDEL_VGA VIDEL_80COL */
+				return &mymod;
+			}
+		break;
+		case 640:
+			if(resolution.height == 480) 
+			{
+				mymod.setscreenmode = 0x8|0x100; /* VIDEL_80COL VIDEL_VERTICAL */
+				return &mymod;
+			}
+			if(resolution.height == 400) 
+			{
+				mymod.setscreenmode = 0x8|0x80; /* VIDEL_80COL VIDEL_COMPAT */
+				return &mymod;
+			}
+		break;
+		case 320:
+			if(resolution.height == 240) return &mymod;
+			{
+				mymod.setscreenmode = 0; /* */
+				return &mymod;
+			}
+			if(resolution.height == 200) 
+			{
+				mymod.setscreenmode = 0x80; /* VIDEL_COMPAT */
+				return &mymod;
+			}
+		break;
+		case 304:
+			if(resolution.height == 224) 
+			{	mymod.setscreenmode = 0x200; /* VIDEL_NEOGEO */
+				return &mymod;
+			}
+		default:
+		break;
 	}
 
 	panic("Requested video mode mode not available.");
@@ -296,7 +329,6 @@ long CDECL initialize(Virtual *vwk)
 	access->funcs.puts("\r\n");
 
 	/* Initialize the RTG card with the requested video mode */
-	fix_all_mode_info();
 	mi = find_mode_info();
 	screen_address = saga_alloc_vram(resolution.width, resolution.height);
 	vwk = me->default_vwk;	/* This is what we're interested in */	
@@ -338,6 +370,8 @@ long CDECL initialize(Virtual *vwk)
 	pixel.width = wk->screen.pixel.width;
 	pixel.height = wk->screen.pixel.height;
 
+  /*  hwmouse = TRUE; */ /* souris hard toujours présent sur vampire */
+
 	return 1;
 }
 
@@ -374,11 +408,9 @@ Virtual* CDECL opnwk(Virtual *vwk)
 	wk = vwk->real_address;
 
 	/* Switch to SAGA screen */
-	saga_set_clock(mi);
+	saga_set_modeline(mi, 6 /*VIDEL_32XRGB*/);
 
-	saga_set_modeline(mi, SAGA_VIDEO_FORMAT_RGB32);
-
-	saga_set_panning(screen_address);
+	saga_set_panning(mi, screen_address);
 
 
 	/* update the settings */

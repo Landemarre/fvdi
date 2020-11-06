@@ -60,20 +60,7 @@ struct ModeInfo
     UWORD       Width;
     UWORD       Height;
     UBYTE       Depth;
-    UBYTE       Flags;  /* See GM* flags below */
-    UWORD       HorTotal;
-    UWORD       HorBlankSize;
-    UWORD       HorSyncStart;
-    UWORD       HorSyncSize;
-    UBYTE       HorSyncSkew;
-    UBYTE       HorEnableSkew;
-    UWORD       VerTotal;
-    UWORD       VerBlankSize;
-    UWORD       VerSyncStart;
-    UWORD       VerSyncSize;
-    UBYTE       Numerator;
-    UBYTE       Denomerator;
-    ULONG       PixelClock;
+    UWORD       setscreenmode;
 };
 
 #define GMB_DOUBLECLOCK         0       /* Clock is doubled after selection */
@@ -91,6 +78,8 @@ struct ModeInfo
 #define GMF_VPOLARITY           (1UL << GMB_VPOLARITY)
 #define GMF_COMPATVIDEO         (1UL << GMB_COMPATVIDEO)
 #define GMF_DOUBLEVERTICAL      (1UL << GMB_DOUBLEVERTICAL)
+
+/* extern short hwmouse;*/
 
 /*
  * Inspired from:
@@ -118,14 +107,14 @@ int saga_pll_clock_freq(int id, BOOL is_ntsc, ULONG *freq);
 int saga_pll_clock_lookup(BOOL is_ntsc, ULONG *freqp);
 int saga_pll_clock_program(int clock);
 
-/* from modeline_vesa.c */
-extern struct ModeInfo modeline_vesa_entry[];
-extern const int modeline_vesa_entries;
 
 /* from saga.c */
-void saga_fix_mode(struct ModeInfo *mi);
-void saga_set_clock(const struct ModeInfo *mi);
-void saga_set_modeline(const struct ModeInfo *mi, UBYTE Format);
-void saga_set_panning(UBYTE *mem);
+void saga_set_modeline(struct ModeInfo *mi, UBYTE Format);
+void saga_set_panning(struct ModeInfo *mi,UBYTE *mem);
+void saga_set_mouse_position(short x, short y);
+
+#ifdef FVDI_H
+void saga_set_mouse_sprite(Workstation *wk, Mouse *mouse);
+#endif
 
 #endif /* SAGA_H */

@@ -50,6 +50,14 @@
 
 #define SAGA_VIDEO_MEMSIZE   0x00800000    /* Default 8M video ram */
 
+#define SAGA_VIDEO_SPRITEX        0x00DFF1D0
+#define SAGA_VIDEO_SPRITEY        0x00DFF1D2
+
+#define SAGA_VIDEO_BPLHMOD        0x00DFF1E6
+
+#define SAGA_SPI_READ             0x00DFF1FA /* SPI Register: Read */
+#define SAGA_SPI_WRITE            0x00DFF1F8 /* SPI Register: Write */
+
 #define SAGA_VIDEO_PLANEPTR  0x00DFF1EC    /* 32-bit pointer to video ram */
 #define SAGA_VIDEO_RESV_1F0  0x00DFF1F0    /* RESERVED */
 #define SAGA_VIDEO_RESV_1F2  0x00DFF1F2    /* RESERVED */
@@ -77,6 +85,16 @@
 #define SAGA_VIDEO_VSSTOP  0x00DFF30c
 #define SAGA_VIDEO_VTOTAL  0x00DFF30e
 #define SAGA_VIDEO_HVSYNC  0x00DFF310
+#define SAGA_VIDEO_SPRITECLUT     0x00DFF3A2 /*  3 x RGB4 colors */
+#define SAGA_VIDEO_SPRITEBPL      0x00DFF800 /* 16 x 2 WORDs */
+
+/*
+ * Maximum display sizes
+ */
+#define SAGA_VIDEO_MAXHV          0x4000
+#define SAGA_VIDEO_MAXVV          0x4000
+#define SAGA_VIDEO_MAXHR          0x8000
+#define SAGA_VIDEO_MAXVR          0x8000
 
 #endif /* SAGA_VIDEO_H */
 /* vim: set shiftwidth=4 expandtab:  */
